@@ -32,6 +32,23 @@ handler.setFormatter(formatter)
 log.addHandler(handler)
 
 
+class STDLogger(object):
+    def __init__(self, logger, level):
+        self.logger = logger
+        self.level = level
+
+    def write(self, message):
+        if message.rstrip() != "":
+            self.logger.log(self.level, message.rstrip())
+
+    def flush(self):
+        pass
+
+
+sys.stdout = STDLogger(log, logging.INFO)
+sys.stderr = STDLogger(log, logging.ERROR)
+
+
 def time_util(arg):
     def outer(func):
         def wrapper(*args, **kwargs):
