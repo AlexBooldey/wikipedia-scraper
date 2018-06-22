@@ -22,28 +22,11 @@ from time import strftime, localtime
 from datetime import datetime, timedelta
 
 log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
 handler = logging.handlers.TimedRotatingFileHandler("wiki.log", when="midnight", backupCount=3)
 formatter = logging.Formatter(u'LINE:[%(lineno)d]# %(levelname)-8s [%(asctime)s]  %(message)s')
 handler.setFormatter(formatter)
 log.addHandler(handler)
-
-
-class STDLogger(object):
-    def __init__(self, logger, level):
-        self.logger = logger
-        self.level = level
-
-    def write(self, message):
-        if message.rstrip() != "":
-            self.logger.log(self.level, message.rstrip())
-
-    def flush(self):
-        pass
-
-
-sys.stdout = STDLogger(log, logging.INFO)
-sys.stderr = STDLogger(log, logging.ERROR)
 
 
 def secondsToStr(elapsed=None):
