@@ -1,54 +1,50 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
- Проект:            	Мониторинг общественного мнения
- Автор:             	Булдей Александр
- Связь :                https://t.me/Alex_Booldey
- Описание :             Скрипт сбора информации из википедии
+__author__ = "Alex Booldey"
+__project__ = "Mind Cloud"
 
- Версия :           	1.0
-"""
+__license__ = 'MIT'
+__version__ = '1.0'
+__maintainer__ = "Alex Booldey"
+__contact__ = "https://t.me/Alex_Booldey"
+__status__ = 'Development'
+
+#Скрипт сбора информации из википедии
+
 import re
 import sys
 import time
+import utils
 import requests
 
+from utils import log
 from bs4 import BeautifulSoup
 from urllib.parse import unquote
 from urllib.parse import urlparse
 
-import utils
-from utils import log
-
 
 class WikiCrawler:
 
-    # Функция инициализации кравлера, вызываеться автоматически при создании класса;
     def __init__(self):
         log.info("Initialization сrawler...")
-        # Чтение конфиг файла
+
         self.conf = utils.load_config()
         self.queue = []
 
         self.session = requests.session()
-
         self.user_agent = self.conf["crawler"]["user_agent"]
 
         self.parenthesis_regex = re.compile('\(.+?\)')
         self.citations_regex = re.compile('\[.+?\]')
 
-        # Инициализация класса для форматирования даты
         self.formatter = utils.DateFormatter()
-
-        # Инифиализация соединения с базой данных
         self.db = utils.DatabaseConnection(self.conf)
+
         log.info("Initialization end!")
 
-    # Функция загрузки страници
-    # in - url страници
-    # out - html страници
-    def load_page(self, full_url, sleep_time=10):
+    # out - html page
+    def load_page_by_url(self, full_url, sleep_time=10):
         count_retry = 1
 
         try:
@@ -74,11 +70,11 @@ class WikiCrawler:
             return
         except requests.Timeout as e:
             log.error(str(e))
-            return self.load_page(full_url)
+            return self.load_page_by_url(full_url)
 
-    # Функция извлечения основного текста со станици
-    # in - html страници
-    # out - текст
+    # Function of extracting the main text from the page
+    # in  - html page
+    # out - text from page
     def get_content(self, soup):
         content = ""
         try:
@@ -103,9 +99,9 @@ class WikiCrawler:
         except Exception as e:
             log.error(e)
 
-    # Функция извлечения категорий со страницы
-    # in soup - html по которому ведется поиск
-    # out - list категорий
+    # Function of extracting categories from the page
+    # in  - html page
+    # out - list get_category
     @staticmethod
     def get_categories(soup):
         categories = []
@@ -125,10 +121,10 @@ class WikiCrawler:
 
         return categories
 
-    # Функция извлечения истории изменения страницы
-    # in - ulr статьи
-    # out - list[0] - дата/время изменения
-    #       list[1] - автор
+    # Function of extracting the history of the page change
+    # in  - article url
+    # out - list[0] - date / time of change
+    #       list[1] - author
     def get_history(self, article_url, lang):
         history = []
         pages = []
@@ -138,12 +134,12 @@ class WikiCrawler:
         history_page_url = "{0}/w/index.php?title={1}&offset=&limit=500&action=history".format(base_url, unquote(
             article_url[len(base_url + '/wiki/'):]))
 
-        response_s = self.load_page(history_page_url)
+        response_s = self.load_page_by_url(history_page_url)
         soup = BeautifulSoup(response_s.text, 'html.parser')
 
         while True:
             if pages:
-                response = self.load_page(pages.pop(0))
+                response = self.load_page_by_url(pages.pop(0))
                 soup = BeautifulSoup(response.text, 'html.parser')
 
             try:
@@ -175,6 +171,9 @@ class WikiCrawler:
                 break
         return history
 
+    # Function of extracting the articles in other languages
+    # in  - html page
+    # out - updates the queue variable with links in other languages for the current article
     def get_page_in_other_languages(self, soup):
         div_lang = soup.find("div", {'id': 'p-lang'})
         li_list = div_lang.find_all("li")
@@ -183,9 +182,11 @@ class WikiCrawler:
             a = li.find('a', href=True)
             self.queue.append(a['href'])
 
+    # The main function of gathering information gets URL, loads the page extracts the title, content, categories,
+    # history of changes, and keeps everything in the database
     def scrap(self, url):
 
-        page = self.load_page(url)
+        page = self.load_page_by_url(url)
 
         page_url = unquote(page.url)
         page_url_hash = utils.get_hash(page_url)
@@ -220,6 +221,7 @@ class WikiCrawler:
         if language_code == "ru":
             self.get_page_in_other_languages(soup)
 
+    # Startup function
     def start(self):
         initial_url = "https://ru.wikipedia.org/wiki/Special:Random"
         self.queue.append(initial_url)

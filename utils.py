@@ -1,19 +1,21 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
- Проект:            	Мониторинг общественного мнения
- Автор:             	Булдей Александр
- Связь :                https://t.me/Alex_Booldey
- Описание :             Вспомогательный модуль для скрипта сбора информации из википедии
+__author__ = "Alex Booldey"
+__project__ = "Mind Cloud"
 
- Версия :           	1.0
-"""
+__license__ = 'MIT'
+__version__ = '1.0'
+__maintainer__ = "Alex Booldey"
+__contact__ = "https://t.me/Alex_Booldey"
+__status__ = 'Development'
+
+# Вспомогательный модуль для скрипта сбора информации из википедии
 
 import re
-import socket
 import sys
 import json
+import socket
 import hashlib
 import pymysql
 
