@@ -11,18 +11,15 @@
 """
 import re
 import sys
+import time
 import requests
 
-from time import sleep
 from bs4 import BeautifulSoup
 from urllib.parse import unquote
 from urllib.parse import urlparse
 
 import utils
 from utils import log
-
-time_flag = False
-count_failed_pages = 0
 
 
 class WikiCrawler:
@@ -51,39 +48,37 @@ class WikiCrawler:
     # Функция загрузки страници
     # in - url страници
     # out - html страници
-    @utils.time_util(time_flag)
-    def load_page(self, full_url, level=0, sleep_time=10):
-        global count_failed_pages
+    def load_page(self, full_url, sleep_time=10):
+        count_retry = 1
 
         try:
-            page = self.session.get(full_url, allow_redirects=True, timeout=20,
-                                    headers={'User-Agent': self.user_agent})
-        except requests.exceptions.ConnectionError:
-            log.error("Check your Internet connection")
-
-            if level in range(0, 5):
-                sleep(sleep_time)
-            elif level in range(5, 10):
-                sleep(sleep_time * 180)
-            elif level > 10:
-                if count_failed_pages >= 5:
-                    log.critical("Wikipedia exit 0, Check your Internet connection")
+            while not utils.is_connected():
+                if count_retry in range(6):
+                    log.error("NO INTERNET, Short retry [{0}/5], Next try -> {1} sec".format(count_retry, sleep_time))
+                    time.sleep(sleep_time)
+                elif count_retry in range(11):
+                    long_sleep_time = sleep_time * 180
+                    log.error(
+                        "NO INTERNET, Long retry [{0}/5], Next try -> {1} sec".format(count_retry - 5, long_sleep_time))
+                    time.sleep(long_sleep_time)
+                elif count_retry > 10:
+                    log.error("OOPS!! Error. Make sure you are connected to Internet and restart script.")
                     sys.exit(0)
+                count_retry = count_retry + 1
 
-                count_failed_pages += 1
-                return
+            return self.session.get(full_url, allow_redirects=True, timeout=20, headers={'User-Agent': self.user_agent})
 
-            return self.load_page(full_url, level + 1)
-
-        if page.status_code not in (200, 404):
-            log.error("Failed to request page (code {})".format(page.status_code))
+        except requests.ConnectionError as e:
+            log.error("OOPS!! Connection Error. Technical Details given below.")
+            log.error(e)
             return
-        return page
+        except requests.Timeout as e:
+            log.error(str(e))
+            return self.load_page(full_url)
 
     # Функция извлечения основного текста со станици
     # in - html страници
     # out - текст
-    @utils.time_util(time_flag)
     def get_content(self, soup):
         content = ""
         try:
@@ -112,7 +107,6 @@ class WikiCrawler:
     # in soup - html по которому ведется поиск
     # out - list категорий
     @staticmethod
-    @utils.time_util(time_flag)
     def get_categories(soup):
         categories = []
 
@@ -135,25 +129,21 @@ class WikiCrawler:
     # in - ulr статьи
     # out - list[0] - дата/время изменения
     #       list[1] - автор
-    @utils.time_util(time_flag)
     def get_history(self, article_url, lang):
         history = []
         pages = []
 
         base_url = '{uri.scheme}://{uri.netloc}'.format(uri=urlparse(article_url))
-        url_history = "https://{0}.wikipedia.org/w/index.php?title={1}&offset=&limit=500&action=history" \
-            .format(lang, unquote(article_url[len(base_url + '/wiki/'):]))
 
-        response = self.load_page(url_history)
-        if response is None:
-            return
-        soup = BeautifulSoup(response.text, 'html.parser')
+        history_page_url = "{0}/w/index.php?title={1}&offset=&limit=500&action=history".format(base_url, unquote(
+            article_url[len(base_url + '/wiki/'):]))
+
+        response_s = self.load_page(history_page_url)
+        soup = BeautifulSoup(response_s.text, 'html.parser')
 
         while True:
-            if not len(pages) == 0:
+            if pages:
                 response = self.load_page(pages.pop(0))
-                if response is None:
-                    return
                 soup = BeautifulSoup(response.text, 'html.parser')
 
             try:
@@ -162,8 +152,8 @@ class WikiCrawler:
                 for element in li_list:
                     try:
                         user = element.find("bdi").text
-
                         wiki_date = element.find("a", {'class': 'mw-changeslist-date'}).text
+
                         if lang in self.formatter.lang_support_default:
                             sql_date = self.formatter.convert_date(lang, wiki_date)
                             history.append((sql_date, user))
@@ -185,8 +175,7 @@ class WikiCrawler:
                 break
         return history
 
-    @utils.time_util(time_flag)
-    def get_lang(self, soup):
+    def get_page_in_other_languages(self, soup):
         div_lang = soup.find("div", {'id': 'p-lang'})
         li_list = div_lang.find_all("li")
 
@@ -194,44 +183,42 @@ class WikiCrawler:
             a = li.find('a', href=True)
             self.queue.append(a['href'])
 
-    @utils.time_util(time_flag)
     def scrap(self, url):
 
         page = self.load_page(url)
 
-        if page is None:
+        page_url = unquote(page.url)
+        page_url_hash = utils.get_hash(page_url)
+
+        if self.db.is_exists(page_url_hash):
             return
+
+        soup = BeautifulSoup(page.text, 'html.parser')
+
+        page_content = self.get_content(soup)
+        page_categories = self.get_categories(soup)
+
+        language_code = utils.get_language_code(url)
+        page_history = self.get_history(page_url, language_code)
+
+        if page_history:
+            created_data = page_history[len(page_history) - 1][0]
+            created_user = page_history[len(page_history) - 1][1]
         else:
-            lang = utils.get_lang(url)
-            page_url = unquote(page.url)
-            page_url_hash = utils.get_hash(page_url)
+            created_user = None
+            created_data = None
 
-            if (lang is None) or (self.db.is_exists(page_url_hash)):
-                return
+        processed_article = [soup.h1.text, page_url, created_user, created_data, page_content, language_code,
+                             page_url_hash]
+        last_id = self.db.save_article(processed_article)
 
-            soup = BeautifulSoup(page.text, 'html.parser')
+        if page_categories:
+            self.db.save_categories(last_id, page_categories)
+        if page_history:
+            self.db.save_history(last_id, page_history)
 
-            content = self.get_content(soup)
-            categories = self.get_categories(soup)
-            history = self.get_history(page_url, lang)
-
-            if history:
-                created_data = history[len(history) - 1][0]
-                created_user = history[len(history) - 1][1]
-            else:
-                created_user = None
-                created_data = None
-
-            processed_article = [soup.h1.text, page_url, created_user, created_data, content, lang, page_url_hash]
-            last_id = self.db.save_article(processed_article)
-
-            if categories:
-                self.db.save_categories(last_id, categories)
-            if history:
-                self.db.save_history(last_id, history)
-
-            if lang == "ru":
-                self.get_lang(soup)
+        if language_code == "ru":
+            self.get_page_in_other_languages(soup)
 
     def start(self):
         initial_url = "https://ru.wikipedia.org/wiki/Special:Random"

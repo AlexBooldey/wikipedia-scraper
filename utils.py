@@ -11,18 +11,15 @@
 """
 
 import re
+import socket
 import sys
-import time
 import json
 import hashlib
 import pymysql
 
 import logging.handlers
-
-from time import time, strftime, localtime
+from time import strftime, localtime
 from datetime import datetime, timedelta
-
-time_flag = False
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
@@ -47,21 +44,6 @@ class STDLogger(object):
 
 sys.stdout = STDLogger(log, logging.INFO)
 sys.stderr = STDLogger(log, logging.ERROR)
-
-
-def time_util(arg):
-    def outer(func):
-        def wrapper(*args, **kwargs):
-            start_time = time()
-            result = func(*args, **kwargs)
-            if arg:
-                print('Func name: {0:<15} Work time {1} sec;'.format(func.__name__,
-                                                                     str(round(time() - start_time, 4))))
-            return result
-
-        return wrapper
-
-    return outer
 
 
 def secondsToStr(elapsed=None):
@@ -90,30 +72,22 @@ def load_config():
     return config_json
 
 
-def get_lang(val):
+def get_language_code(url):
+    return url[url.find("/") + 2: url.find(".")]
+
+
+def is_connected():
     try:
-        return re.search(r'//(\b\w{2,6}\b)\w*', val).group(1)
-    except AttributeError as e:
-        log.warning('Page not support; Url: {0}'.format(val))
-        return None
-
-
-# util class
-class SingletonMeta(type):
-    def __init__(cls, name, bases, val):
-        super(SingletonMeta, cls).__init__(name, bases, val)
-        cls.instance = None
-
-    def __call__(cls, *args, **kw):
-        if cls.instance is None:
-            cls.instance = super(SingletonMeta, cls).__call__(*args, **kw)
-        return cls.instance
+        host = socket.gethostbyname("www.google.com")
+        socket.create_connection((host, 80), 2).close()
+        return True
+    except OSError as e:
+        pass
+    return False
 
 
 # database connection class
 class DatabaseConnection(object):
-    __metaclass__ = SingletonMeta
-
     # Функция инициализации соединения с базой, вызываеться автоматически при создании класса;
     # Принемает на вход json файл с конфигурационными параметрами
     def __init__(self, conf):
@@ -144,7 +118,6 @@ class DatabaseConnection(object):
     # in - hash url
     # out - 1(True) - запись найдена
     #       0(False) - записи не найдена
-    @time_util(time_flag)
     def is_exists(self, check_hash):
         try:
             self.__cursor.execute('call check_exists(%s)', check_hash)
@@ -157,7 +130,6 @@ class DatabaseConnection(object):
     # Функция сохранения статьи в базу
     # in - масив данных статьи
     # out - id последней добавленной записи
-    @time_util(time_flag)
     def save_article(self, article_args):
         try:
             self.__cursor.execute("call add_article(%s,%s,%s,%s,%s,%s,%s)", article_args)
@@ -172,7 +144,6 @@ class DatabaseConnection(object):
     # Функция сохранения категорий в базу
     # in parent_id - id статья к которой относятся категории
     # in category_list - список категорий
-    @time_util(time_flag)
     def save_categories(self, parent_id, category_list):
         try:
             for cat in category_list:
@@ -186,7 +157,6 @@ class DatabaseConnection(object):
     # in history_list - список, где
     #                   list[0] - дата и время измениния
     #                   list[1] - автор изменения
-    @time_util(time_flag)
     def save_history(self, parent_id, history_list):
         try:
             for history in history_list:
