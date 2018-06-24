@@ -9,5 +9,5 @@
   ===================================================================================================*/
 
 ALTER TABLE NEWS
-  ADD f_language varchar(10),
+  ADD f_language varchar(12),
   ADD f_hash char(32);

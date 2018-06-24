@@ -8,12 +8,12 @@ The Python project for capturing random pages in Wikipedia, extracting informati
 For further storage in the MySQL database.
 
 # Installing & Running
-- Python 3.6.5
+- Python 3.6.5 (pip 9.0.3)
 - MySQL (I'm using the version 5.7.22-0ubuntu0.16.04.1)
 - All libraries used are in the Python Standard Library except:
-  - BeautifulSoup4 (```pip install beautifulsoup4```)
-  - pymysql
-  - requests
+  - BeautifulSoup4 - 4.6.0 (```pip install beautifulsoup4```)
+  - pymysql - 0.8.1
+  - requests - 2.18.4
 
 
 ## Running

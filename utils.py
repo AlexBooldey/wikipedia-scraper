@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-__author__ = "Alex Booldey"
-__project__ = "Mind Cloud"
+__author__ = 'Alex Booldey'
+__project__ = 'Mind Cloud'
 
 __license__ = 'MIT'
 __version__ = '1.0'
-__maintainer__ = "Alex Booldey"
-__contact__ = "https://t.me/Alex_Booldey"
+__maintainer__ = 'Alex Booldey'
+__contact__ = 'https://t.me/Alex_Booldey'
 __status__ = 'Development'
 
 # Вспомогательный модуль для скрипта сбора информации из википедии
@@ -25,7 +25,7 @@ from datetime import datetime, timedelta
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
-handler = logging.handlers.TimedRotatingFileHandler("wiki.log", when="midnight", backupCount=3)
+handler = logging.handlers.TimedRotatingFileHandler('wiki.log', when='midnight', backupCount=3)
 formatter = logging.Formatter(u'LINE:[%(lineno)d]# %(levelname)-8s [%(asctime)s]  %(message)s')
 handler.setFormatter(formatter)
 log.addHandler(handler)
@@ -33,7 +33,7 @@ log.addHandler(handler)
 
 def secondsToStr(elapsed=None):
     if elapsed is None:
-        return strftime("%Y-%m-%d %H:%M:%S", localtime())
+        return strftime('%Y-%m-%d %H:%M:%S', localtime())
     else:
         return str(timedelta(seconds=elapsed))
 
@@ -45,10 +45,10 @@ def get_hash(val):
 
 # Функция чтения конфиг файла
 def load_config():
-    log.info("Open file config.json")
+    log.info('Open file config.json')
     try:
         with open('config.json') as json_data_file:
-            log.info("Read file...")
+            log.info('Read file...')
             config_json = json.load(json_data_file)
         json_data_file.close()
     except FileNotFoundError as e:
@@ -58,12 +58,12 @@ def load_config():
 
 
 def get_language_code(url):
-    return url[url.find("/") + 2: url.find(".")]
+    return url[url.find('/') + 2: url.find('.')]
 
 
 def is_connected():
     try:
-        host = socket.gethostbyname("www.google.com")
+        host = socket.gethostbyname('www.google.com')
         socket.create_connection((host, 80), 2).close()
         return True
     except OSError as e:
@@ -76,10 +76,10 @@ class DatabaseConnection(object):
     # Функция инициализации соединения с базой, вызываеться автоматически при создании класса;
     # Принемает на вход json файл с конфигурационными параметрами
     def __init__(self, conf):
-        self.__host = conf["mysql"]["host"]
-        self.__user = conf["mysql"]["user"]
-        self.__password = conf["mysql"]["password"]
-        self.__database = conf["mysql"]["database"]
+        self.__host = conf['mysql']['host']
+        self.__user = conf['mysql']['user']
+        self.__password = conf['mysql']['password']
+        self.__database = conf['mysql']['database']
 
         pymysql.install_as_MySQLdb()
         try:
@@ -117,8 +117,8 @@ class DatabaseConnection(object):
     # out - id последней добавленной записи
     def save_article(self, article_args):
         try:
-            self.__cursor.execute("call add_article(%s,%s,%s,%s,%s,%s,%s)", article_args)
-            self.__cursor.execute("call get_id(%s)", article_args[0])
+            self.__cursor.execute('call add_article(%s,%s,%s,%s,%s,%s,%s)', article_args)
+            self.__cursor.execute('call get_id(%s)', article_args[0])
 
             val = self.__cursor.fetchall()[0][0]
             self.__connection.commit()
@@ -132,7 +132,7 @@ class DatabaseConnection(object):
     def save_categories(self, parent_id, category_list):
         try:
             for cat in category_list:
-                self.__cursor.execute("call add_article_category(%s,%s)", [parent_id, cat])
+                self.__cursor.execute('call add_article_category(%s,%s)', [parent_id, cat])
                 self.__connection.commit()
         except Exception as e:
             log.error(e)
@@ -146,10 +146,10 @@ class DatabaseConnection(object):
         try:
             for history in history_list:
                 if history[0] is not None:
-                    self.__cursor.execute("call add_article_history(%s,%s, %s, %s)",
+                    self.__cursor.execute('call add_article_history(%s,%s, %s, %s)',
                                           [parent_id, history[0], history[1], None])
                 else:
-                    self.__cursor.execute("call add_article_history(%s,%s, %s, %s)",
+                    self.__cursor.execute('call add_article_history(%s,%s, %s, %s)',
                                           [parent_id, None, history[1], history[2]])
                 self.__connection.commit()
         except Exception as e:
@@ -161,23 +161,27 @@ class DateFormatter:
 
     def __init__(self):
 
-        self.lang_support_default = {'en', 'ru', 'de', 'pl', 'ua', 'it', 'be', 'bg', 'eo', 'es', 'fr', 'simple'}
+        self.lang_support_default = {'ru', 'bg', 'ua', 'be', 'de', 'en', 'simple', 'fr', 'pl', 'it', 'eo', 'es'}
         self.__months = {
-            ('января', 'януари', 'січня', 'студзень', 'Jan', 'January', 'janvier', 'sty', 'ene', 'gen'): 1,
-            ('февраля', 'февруари', 'лютого', 'лютага', 'Feb', 'February', 'février', 'lut', 'feb'): 2,
-            ('марта', 'март', 'березня', 'сакавіка', 'Mär', 'March', 'mars', 'mar'): 3,
-            ('апреля', 'април', 'квітня', 'красавіка', 'Apr', 'April', 'avril', 'kwi', 'abr', 'apr'): 4,
-            ('мая', 'май', 'травня', 'мая', 'Mai', 'May', 'mai', 'maj', 'may', 'mag'): 5,
-            ('июня', 'юни', 'червня', 'чэрвеня', 'Jun', 'June', 'juin', 'cze', 'jun', 'giu'): 6,
-            ('июля', 'юли', 'липня', 'ліпеня', 'Jul', 'July', 'juillet', 'lip', 'jul', 'lug'): 7,
-            ('августа', 'август', 'серпня', 'жніўня', 'Aug', 'August', 'août', 'sie', 'ago'): 8,
-            ('сентября', 'септември', 'вересня', 'верасня', 'Sep', 'September', 'septembre', 'wrz', 'sep', 'set'): 9,
-            ('октября', 'октомври', 'жовтня', 'кастрычніка', 'Okt', 'October', 'octobre', 'paź', 'oct', 'ott'): 10,
-            ('ноября', 'ноември', 'листопада', 'лістапада', 'Nov', 'November', 'novembre', 'lis', 'nov'): 11,
-            ('декабря', 'декември', 'грудня', 'снежня', 'Dez', 'December', 'décembre', 'gru', 'dic'): 12}
+            #  ru           bg           ua            be          de     en/simple       fr         pl    it     eo     es
+            ('января',   'януари',    'січня',     'студзеня',    'Jan', 'January',   'janvier',   'sty', 'gen', 'jan', 'ene'): 1,
+            ('февраля',  'февруари',  'лютого',    'лютага',      'Feb', 'February',  'février',   'lut', 'feb', 'feb', 'feb'): 2,
+            ('марта',    'март',      'березня',   'сакавіка',    'Mär', 'March',     'mars',      'mar', 'mar', 'mar', 'mar'): 3,
+            ('апреля',   'април',     'квітня',    'красавіка',   'Apr', 'April',     'avril',     'kwi', 'apr', 'apr', 'abr'): 4,
+            ('мая',      'май',       'травня',    'мая',         'Mai', 'May',       'mai',       'maj', 'mag', 'maj', 'may'): 5,
+            ('июня',     'юни',       'червня',    'чэрвеня',     'Jun', 'June',      'juin',      'cze', 'giu', 'jun', 'jun'): 6,
+            ('июля',     'юли',       'липня',     'ліпеня',      'Jul', 'July',      'juillet',   'lip', 'lug', 'jul', 'jul'): 7,
+            ('августа',  'август',    'серпня',    'жніўня',      'Aug', 'August',    'août',      'sie', 'ago', 'aŭg', 'ago'): 8,
+            ('сентября', 'септември', 'вересня',   'верасня',     'Sep', 'September', 'septembre', 'wrz', 'set', 'sep', 'sep'): 9,
+            ('октября',  'октомври',  'жовтня',    'кастрычніка', 'Okt', 'October',   'octobre',   'paź', 'ott', 'okt', 'oct'): 10,
+            ('ноября',   'ноември',   'листопада', 'лістапада',   'Nov', 'November',  'novembre',  'lis', 'nov', 'nov', 'nov'): 11,
+            ('декабря',  'декември',  'грудня',    'снежня',      'Dez', 'December',  'décembre',  'gru', 'dic', 'dec', 'dic'): 12}
 
     def __format_month(self, month):
-        return next(val for k, val in self.__months.items() if month in k)
+        try:
+            return next(val for k, val in self.__months.items() if month in k)
+        except StopIteration:
+            log.error(month)
 
     @staticmethod
     def __clean_date(val):

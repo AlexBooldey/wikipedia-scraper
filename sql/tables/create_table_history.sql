@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS history (
 	f_id 			    bigint		NOT NULL AUTO_INCREMENT,	/*history id*/
 	f_parent_id 	bigint 		NOT NULL,					        /*article category*/
 	f_date 			  datetime,								            /*the date of the article change*/
-	f_user 			  varchar(50),			                  /*who changed the article*/
+	f_user 			  varchar(80),			                  /*who changed the article*/
 	f_str_date    varchar(50),                        /*the date format str (unsupported)*/
 	CONSTRAINT history_pk PRIMARY KEY (f_id)
 );

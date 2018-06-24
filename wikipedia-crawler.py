@@ -10,8 +10,6 @@ __maintainer__ = "Alex Booldey"
 __contact__ = "https://t.me/Alex_Booldey"
 __status__ = 'Development'
 
-#Скрипт сбора информации из википедии
-
 import re
 import sys
 import time
@@ -50,26 +48,25 @@ class WikiCrawler:
         try:
             while not utils.is_connected():
                 if count_retry in range(6):
-                    log.error("NO INTERNET, Short retry [{0}/5], Next try -> {1} sec".format(count_retry, sleep_time))
+                    log.warn("NO INTERNET, Short retry [{0}/5], Next try -> {1} sec".format(count_retry, sleep_time))
                     time.sleep(sleep_time)
                 elif count_retry in range(11):
                     long_sleep_time = sleep_time * 180
-                    log.error(
+                    log.warn(
                         "NO INTERNET, Long retry [{0}/5], Next try -> {1} sec".format(count_retry - 5, long_sleep_time))
                     time.sleep(long_sleep_time)
                 elif count_retry > 10:
-                    log.error("OOPS!! Error. Make sure you are connected to Internet and restart script.")
+                    log.critical("OOPS!! Error. Make sure you are connected to Internet and restart script.")
                     sys.exit(0)
                 count_retry = count_retry + 1
 
             return self.session.get(full_url, allow_redirects=True, timeout=20, headers={'User-Agent': self.user_agent})
 
         except requests.ConnectionError as e:
-            log.error("OOPS!! Connection Error. Technical Details given below.")
-            log.error(e)
+            log.warn(e)
             return
         except requests.Timeout as e:
-            log.error(str(e))
+            log.warn(e)
             return self.load_page_by_url(full_url)
 
     # Function of extracting the main text from the page
@@ -84,8 +81,7 @@ class WikiCrawler:
             for p in p_list:
                 try:
                     text = p.get_text().strip()
-                except Exception as e:
-                    log.error(e)
+                except AttributeError:
                     continue
 
                 text = self.parenthesis_regex.sub('', text)
@@ -96,8 +92,8 @@ class WikiCrawler:
                 else:
                     content = content + " " + text + '\n'
             return content
-        except Exception as e:
-            log.error(e)
+        except AttributeError as e:
+            log.warn(e)
 
     # Function of extracting categories from the page
     # in  - html page
@@ -113,12 +109,11 @@ class WikiCrawler:
                 try:
                     parts = category.get("title").rsplit(':', 1)
                     categories.append(parts[1])
-                except Exception as e:
+                except AttributeError as e:
                     log.error(e)
                     continue
-        except Exception as e:
-            log.error(e)
-
+        except AttributeError:
+            log.warn("Categories not found!")
         return categories
 
     # Function of extracting the history of the page change
@@ -146,28 +141,27 @@ class WikiCrawler:
                 ul_history = soup.find("ul", {'id': 'pagehistory'})
                 li_list = ul_history.find_all("li")
                 for element in li_list:
-                    try:
-                        user = element.find("bdi").text
-                        wiki_date = element.find("a", {'class': 'mw-changeslist-date'}).text
+                    user = element.find("bdi").text
 
-                        if lang in self.formatter.lang_support_default:
-                            sql_date = self.formatter.convert_date(lang, wiki_date)
-                            history.append((sql_date, user))
-                        else:
-                            history.append((None, user, wiki_date))
-                    except Exception as e:
-                        log.error(e)
-                        continue
-            except Exception as e:
-                log.error(e)
+                    try:
+                        wiki_date = element.find("a", {'class': 'mw-changeslist-date'}).text
+                    except AttributeError:
+                        wiki_date = element.find("span", {'class': 'history-deleted'}).text
+
+                    if lang in self.formatter.lang_support_default:
+                        sql_date = self.formatter.convert_date(lang, wiki_date)
+                        history.append((sql_date, user))
+                    else:
+                        history.append((None, user, wiki_date))
+            except AttributeError as e:
+                log.warn(e)
 
             try:
                 next_url = soup.find("a", {'rel': 'next'})['href']
                 if next_url:
                     next_url = base_url + next_url
                     pages.append(next_url)
-            except Exception as e:
-                log.debug(e)
+            except TypeError:
                 break
         return history
 
@@ -175,12 +169,15 @@ class WikiCrawler:
     # in  - html page
     # out - updates the queue variable with links in other languages for the current article
     def get_page_in_other_languages(self, soup):
-        div_lang = soup.find("div", {'id': 'p-lang'})
-        li_list = div_lang.find_all("li")
+        try:
+            div_lang = soup.find("div", {'id': 'p-lang'})
+            li_list = div_lang.find_all("li")
 
-        for li in li_list:
-            a = li.find('a', href=True)
-            self.queue.append(a['href'])
+            for li in li_list:
+                a = li.find('a', href=True)
+                self.queue.append(a['href'])
+        except AttributeError:
+            log.warn("Other languages not found!")
 
     # The main function of gathering information gets URL, loads the page extracts the title, content, categories,
     # history of changes, and keeps everything in the database
