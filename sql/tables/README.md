@@ -10,8 +10,9 @@
 - sql script for create new column
     - **update_table_news.sql**
 
-- sql script for create index in News teble
+- sql script for create/delete index in News table
     - **create_news_index.sql**
+    - **drop_news_index.sql**
 	
 - sh files to create/delete all tables
     - **create_wiki_tables.sh**

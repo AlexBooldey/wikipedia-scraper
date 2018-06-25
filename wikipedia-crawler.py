@@ -113,7 +113,7 @@ class WikiCrawler:
                     log.error(e)
                     continue
         except AttributeError:
-            log.warn("Categories not found!")
+            pass
         return categories
 
     # Function of extracting the history of the page change
@@ -130,11 +130,17 @@ class WikiCrawler:
             article_url[len(base_url + '/wiki/'):]))
 
         response_s = self.load_page_by_url(history_page_url)
+        if not response_s:
+            return
+
         soup = BeautifulSoup(response_s.text, 'html.parser')
 
         while True:
             if pages:
                 response = self.load_page_by_url(pages.pop(0))
+                if not response:
+                    return
+
                 soup = BeautifulSoup(response.text, 'html.parser')
 
             try:
@@ -184,6 +190,9 @@ class WikiCrawler:
     def scrap(self, url):
 
         page = self.load_page_by_url(url)
+
+        if not page:
+            return
 
         page_url = unquote(page.url)
         page_url_hash = utils.get_hash(page_url)

@@ -7,6 +7,7 @@
 #   Description:        The script creates the tables articles, history, categories
 #   Version:           	1.0
 #   History:          	May 23, 2018 - Created
+#                       June 24, 2018 - Add new file create_news_index.sql
 #===================================================================================================
 
 user_name=$1
