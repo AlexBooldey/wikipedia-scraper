@@ -246,4 +246,5 @@ class WikiCrawler:
 
 
 if __name__ == '__main__':
+
     WikiCrawler().start()

@@ -58,7 +58,12 @@ def load_config():
 
 
 def get_language_code(url):
-    return url[url.find('/') + 2: url.find('.')]
+    code = url[url.find('/') + 2: url.find('.')]
+
+    if len(code) >= 12:
+        code = code[0:12]
+
+    return code
 
 
 def is_connected():
@@ -164,18 +169,21 @@ class DateFormatter:
         self.lang_support_default = {'ru', 'bg', 'ua', 'be', 'de', 'en', 'simple', 'fr', 'pl', 'it', 'eo', 'es'}
         self.__months = {
             #  ru           bg           ua            be          de     en/simple       fr         pl    it     eo     es
-            ('января',   'януари',    'січня',     'студзеня',    'Jan', 'January',   'janvier',   'sty', 'gen', 'jan', 'ene'): 1,
-            ('февраля',  'февруари',  'лютого',    'лютага',      'Feb', 'February',  'février',   'lut', 'feb', 'feb', 'feb'): 2,
-            ('марта',    'март',      'березня',   'сакавіка',    'Mär', 'March',     'mars',      'mar', 'mar', 'mar', 'mar'): 3,
-            ('апреля',   'април',     'квітня',    'красавіка',   'Apr', 'April',     'avril',     'kwi', 'apr', 'apr', 'abr'): 4,
-            ('мая',      'май',       'травня',    'мая',         'Mai', 'May',       'mai',       'maj', 'mag', 'maj', 'may'): 5,
-            ('июня',     'юни',       'червня',    'чэрвеня',     'Jun', 'June',      'juin',      'cze', 'giu', 'jun', 'jun'): 6,
-            ('июля',     'юли',       'липня',     'ліпеня',      'Jul', 'July',      'juillet',   'lip', 'lug', 'jul', 'jul'): 7,
-            ('августа',  'август',    'серпня',    'жніўня',      'Aug', 'August',    'août',      'sie', 'ago', 'aŭg', 'ago'): 8,
-            ('сентября', 'септември', 'вересня',   'верасня',     'Sep', 'September', 'septembre', 'wrz', 'set', 'sep', 'sep'): 9,
-            ('октября',  'октомври',  'жовтня',    'кастрычніка', 'Okt', 'October',   'octobre',   'paź', 'ott', 'okt', 'oct'): 10,
-            ('ноября',   'ноември',   'листопада', 'лістапада',   'Nov', 'November',  'novembre',  'lis', 'nov', 'nov', 'nov'): 11,
-            ('декабря',  'декември',  'грудня',    'снежня',      'Dez', 'December',  'décembre',  'gru', 'dic', 'dec', 'dic'): 12}
+            ('января', 'януари', 'січня', 'студзеня', 'Jan', 'January', 'janvier', 'sty', 'gen', 'jan', 'ene'): 1,
+            ('февраля', 'февруари', 'лютого', 'лютага', 'Feb', 'February', 'février', 'lut', 'feb', 'feb', 'feb'): 2,
+            ('марта', 'март', 'березня', 'сакавіка', 'Mär', 'March', 'mars', 'mar', 'mar', 'mar', 'mar'): 3,
+            ('апреля', 'април', 'квітня', 'красавіка', 'Apr', 'April', 'avril', 'kwi', 'apr', 'apr', 'abr'): 4,
+            ('мая', 'май', 'травня', 'мая', 'Mai', 'May', 'mai', 'maj', 'mag', 'maj', 'may'): 5,
+            ('июня', 'юни', 'червня', 'чэрвеня', 'Jun', 'June', 'juin', 'cze', 'giu', 'jun', 'jun'): 6,
+            ('июля', 'юли', 'липня', 'ліпеня', 'Jul', 'July', 'juillet', 'lip', 'lug', 'jul', 'jul'): 7,
+            ('августа', 'август', 'серпня', 'жніўня', 'Aug', 'August', 'août', 'sie', 'ago', 'aŭg', 'ago'): 8,
+            ('сентября', 'септември', 'вересня', 'верасня', 'Sep', 'September', 'septembre', 'wrz', 'set', 'sep',
+             'sep'): 9,
+            ('октября', 'октомври', 'жовтня', 'кастрычніка', 'Okt', 'October', 'octobre', 'paź', 'ott', 'okt',
+             'oct'): 10,
+            ('ноября', 'ноември', 'листопада', 'лістапада', 'Nov', 'November', 'novembre', 'lis', 'nov', 'nov',
+             'nov'): 11,
+            ('декабря', 'декември', 'грудня', 'снежня', 'Dez', 'December', 'décembre', 'gru', 'dic', 'dec', 'dic'): 12}
 
     def __format_month(self, month):
         try:

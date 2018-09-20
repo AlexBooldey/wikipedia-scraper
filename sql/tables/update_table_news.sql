@@ -2,7 +2,7 @@
    Project:            	Mind cloud
    Author:             	Buldey Alexander
    Contact:             https://t.me/Alex_Booldey
-   Description:         The script creates the table of categories
+   Description:         The script add new column in the table news
    Version:           	1.1
    History:           	May 25, 2018 - Created
                         May 29, 2018 - Add columns f_language, f_hash
